@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>记忆加减法 - 关卡游戏</title>
+  <style>
+    :root{
+      --bg:#071226;
+      --panel:#0c2540;
+      --accent:#38a3ff;
+      --text:#e6f0ff;
+      --muted:#98a8bf;
+      --danger:#ff6b6b;
+      --success:#64d17b;
+    }
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; background: linear-gradient(180deg,#031029 0%, #071226 60%); color:var(--text);}
+    .app {
+      max-width:1000px;
+      margin:24px auto;
+      padding:18px;
+      border-radius:10px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      box-shadow: 0 8px 30px rgba(2,8,20,0.6);
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap:18px;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom: 6px;
+    }
+    header h1 { font-size:18px; margin:0; letter-spacing:0.4px; }
+    header .meta { color:var(--muted); font-size:13px; }
+
+    .left, .right { padding:12px; border-radius:8px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); }
+
+    .controls h3 { margin:0 0 8px 0; font-size:15px; }
+    .controls .row { margin:8px 0; display:flex; gap:8px; align-items:center; }
+    label { font-size:13px; color:var(--muted); min-width:90px; }
+    input[type="number"], input[type="text"], select { padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color:var(--text); width:100%; }
+    button { padding:8px 12px; border-radius:8px; border:0; cursor:pointer; color:#fff; background:linear-gradient(180deg,var(--accent),#0b78d1); }
+    button.secondary { background: linear-gradient(180deg,#314455,#23384a); color:#dbe8ff; }
+    button.warn { background:linear-gradient(180deg,var(--danger),#e25252); }
+
+    .bigmsg { text-align:center; padding:12px; border-radius:8px; background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); color:var(--muted); }
+
+    .stage { display:flex; flex-direction:column; gap:12px; align-items:stretch; }
+    .info { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .level { font-weight:700; color:var(--accent); }
+    .progress { color:var(--muted); font-size:13px; }
+
+    .display {
+      min-height:180px;
+      border-radius:10px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      flex-direction:column;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+      position:relative;
+      padding:18px;
+      gap:10px;
+    }
+    .preview-list { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; width:100%; }
+    .preview-item { background: rgba(0,0,0,0.12); padding:10px 14px; border-radius:8px; min-width:120px; text-align:center; font-weight:600; }
+
+    .incoming { font-size:28px; color:#fff; font-weight:700; text-align:center; width:100%; }
+    .sub { color:var(--muted); font-size:13px; margin-top:0; text-align:center; width:100%; }
+
+    .timerbar { position:relative; height:8px; background:rgba(255,255,255,0.03); border-radius:6px; overflow:hidden; width:100%; }
+    .timerbar > div { height:100%; background:linear-gradient(90deg,#ffd26b,#ff8c6b); width:100%; transform-origin:left; }
+
+    .answerarea { display:flex; gap:10px; align-items:center; margin-top:8px; }
+    .answerarea input { font-size:20px; padding:14px 16px; width:100%; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color:var(--text); }
+    .status { font-size:13px; color:var(--muted); }
+
+    .footer { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:6px; }
+
+    .leaderboard { margin-top:12px; padding:10px; background: rgba(255,255,255,0.01); border-radius:8px; color:var(--muted); max-height:220px; overflow:auto; font-size:13px; }
+    .leaderboard table { width:100%; border-collapse:collapse; font-size:13px; }
+    .leaderboard th { text-align:left; font-size:12px; color:var(--muted); padding-bottom:6px; }
+    .leaderboard td { padding:6px 0; }
+
+    footer.note { grid-column:1/-1; margin-top:8px; color:var(--muted); font-size:13px; text-align:center; }
+
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:9999; }
+    .modal { background:linear-gradient(180deg,#0a2033,#071726); padding:20px; border-radius:10px; width:380px; color:var(--text); box-shadow:0 12px 40px rgba(0,0,0,0.6); }
+    .modal h3 { margin:0 0 10px 0; font-size:18px; }
+    .modal input { width:100%; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color:var(--text); margin-bottom:10px; font-size:16px; }
+
+    .start-area { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
+    .start-area button.start { padding:10px 16px; font-size:15px; border-radius:10px; background:linear-gradient(180deg,#4cc0ff,#0b78d1); }
+
+    /* replay 按钮：蓝色（再来一次） */
+    .start-area button.replay { padding:10px 12px; font-size:14px; border-radius:10px; background: linear-gradient(180deg,#4cc0ff,#0b78d1); }
+
+    /* next 按钮：绿色（下一关） */
+    .start-area button.next { padding:10px 12px; font-size:14px; border-radius:10px; background: linear-gradient(180deg,#7be585,#22b14c); }
+
+    @media (max-width:900px){
+      .app { grid-template-columns: 1fr; padding:12px; }
+      .left, .right { padding:10px; }
+      .preview-item { min-width:110px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="记忆加减法游戏">
+    <header>
+      <h1>记忆加减法（5 关）</h1>
+      <div class="meta">每关 10 题 · 每题答题时间可调 · 答错或超时游戏结束</div>
+    </header>
+
+    <div class="left">
+      <div class="controls">
+        <h3>游戏设置</h3>
+        <div class="row">
+          <label>当前关卡</label>
+          <div style="flex:1">
+            <select id="levelSelect">
+              <option value="1">关卡 1（记忆 1 题）</option>
+              <option value="2">关卡 2（记忆 2 题）</option>
+              <option value="3">关卡 3（记忆 3 题）</option>
+              <option value="4">关卡 4（记忆 4 题）</option>
+              <option value="5">关卡 5（记忆 5 题）</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>每题时限（秒）</label>
+          <input id="timeLimit" type="number" min="1" max="10" value="2" disabled />
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button id="btnReset" class="secondary" style="display:none;">重置排行榜</button>
+          <!-- 左侧移除 下一关 按钮，右侧显示（动态控制） -->
+        </div>
+
+        <div style="margin-top:12px;">
+          <div class="bigmsg"><strong>说明：</strong> 每关 10 题。关卡 N 意味着你需要记住 N 题（开始前会预览）。点击“开始游戏”后开始按钮会消失；游戏结束（失败或通关）后会出现“再来一次”（失败仅有再来一次；通关同时显示“下一关”）。再来一次刷新界面，需手动点击“开始游戏”。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="stage">
+        <div class="info">
+          <div>
+            <div class="level">关卡 <span id="curLevel">1</span></div>
+            <div class="progress" id="progressText">题目: <span id="answered">0</span> / 10</div>
+          </div>
+
+          <div style="text-align:right">
+            <div class="status">状态: <span id="gameStatus">准备</span></div>
+            <div style="font-size:12px;color:var(--muted)">超时或错误将结束当前游戏</div>
+
+            <div class="start-area" style="margin-top:8px;">
+              <!-- 开始游戏（蓝色主色） -->
+              <button id="btnStart" class="start" disabled>开始游戏</button>
+
+              <!-- 再来一次（蓝色），游戏结束后显示，点击会刷新界面但不自动倒计时 -->
+              <button id="btnReplay" class="replay" style="display:none; margin-left:8px;">再来一次</button>
+
+              <!-- 下一关（绿色），仅在通关时显示 -->
+              <button id="btnNewLevel" class="next" style="display:none; margin-left:8px;">下一关</button>
+
+              <!-- 停止（仅调试用户可见） -->
+              <button id="btnStop" class="secondary" style="display:none; margin-left:8px;">停止</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="display" aria-live="polite" aria-atomic="true">
+          <div class="preview-list" id="previewList" aria-hidden="false"></div>
+          <div class="incoming" id="incomingQ">—</div>
+          <div class="sub" id="subInfo">点击开始以显示记忆题（开始后直接进入倒计时）</div>
+          <div class="timerbar" aria-hidden="true"><div id="timerFill" style="width:100%"></div></div>
+        </div>
+
+        <div class="answerarea">
+          <div style="flex:1">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">请输入待答题目的答案（输入后自动提交，答案 0–9）</div>
+            <input id="answerInput" type="text" inputmode="numeric" autocomplete="off" placeholder="在此输入答案" disabled />
+          </div>
+          <div style="width:200px">
+            <div style="margin-bottom:8px;"><strong>当前应答题：</strong></div>
+            <div style="font-size:18px;color:var(--accent); font-weight:700;" id="expectLabel">—</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div>
+            <div style="font-size:13px;color:var(--muted)">已答对 <strong id="correctCnt">0</strong> 道 / 连续正确 <strong id="streak">0</strong></div>
+          </div>
+          <div>
+            <div style="font-size:13px;color:var(--muted)">本次用时：<span id="elapsed">0.0</span>s</div>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input id="username" type="text" placeholder="游戏结束后输入用户名保存排行榜（例如：小明）" />
+            <button id="saveScore" class="warn" disabled>保存结果</button>
+          </div>
+        </div>
+
+        <div class="leaderboard" aria-live="polite">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div><strong>排行榜（本地）</strong></div>
+            <div style="font-size:12px;color:var(--muted)">最多显示 20 条</div>
+          </div>
+          <div style="margin-top:8px;">
+            <table id="boardTable" aria-describedby="排行榜">
+              <thead><tr><th>名次</th><th>用户</th><th>关卡</th><th>题数</th><th>时间</th></tr></thead>
+              <tbody id="boardBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="note"></footer>
+  </div>
+
+  <div id="nameModal" class="modal-backdrop" role="dialog" aria-modal="true" style="display:flex;">
+    <div class="modal" role="document">
+      <h3>请输入用户名</h3>
+      <p style="color:var(--muted); margin-top:6px; margin-bottom:10px;">输入后可开始游戏。用户名为 <code>bunengsian</code> 的用户为调试账户，可选择任意关并可见调试控件。</p>
+      <input id="modalName" type="text" placeholder="你的名字（例如：小明）" />
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button id="modalOk">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      // DOM
+      const levelSelect = document.getElementById('levelSelect');
+      const timeLimitEl = document.getElementById('timeLimit');
+      const btnStart = document.getElementById('btnStart');
+      const btnStop = document.getElementById('btnStop');
+      const btnReset = document.getElementById('btnReset');
+      const btnNewLevel = document.getElementById('btnNewLevel');
+      const btnReplay = document.getElementById('btnReplay');
+
+      const curLevelEl = document.getElementById('curLevel');
+      const progressText = document.getElementById('progressText');
+      const incomingQ = document.getElementById('incomingQ');
+      const subInfo = document.getElementById('subInfo');
+      const timerFill = document.getElementById('timerFill');
+
+      const answerInput = document.getElementById('answerInput');
+      const expectLabel = document.getElementById('expectLabel');
+
+      const previewListEl = document.getElementById('previewList');
+
+      const answeredEl = document.getElementById('answered');
+      const correctCntEl = document.getElementById('correctCnt');
+      const streakEl = document.getElementById('streak');
+      const elapsedEl = document.getElementById('elapsed');
+
+      const usernameEl = document.getElementById('username');
+      const saveScoreBtn = document.getElementById('saveScore');
+
+      const boardBody = document.getElementById('boardBody');
+      const gameStatusEl = document.getElementById('gameStatus');
+
+      const nameModal = document.getElementById('nameModal');
+      const modalName = document.getElementById('modalName');
+      const modalOk = document.getElementById('modalOk');
+
+      // Game params
+      const TOTAL_QUESTIONS = 10;
+      const MAX_LEVEL = 5;
+
+      let level = parseInt(levelSelect.value,10) || 1;
+      let timeLimit = parseFloat(timeLimitEl.value) || 2;
+
+      // state
+      let questions = [];
+      let nextShowIndex = 0;
+      let expectIndex = 0;
+      let answeredCount = 0;
+      let correctCount = 0;
+      let streak = 0;
+      let running = false;
+      let timer = null;
+      let startTime = null;
+      let elapsedTotal = 0;
+
+      let currentUser = null;
+      let finished = false;
+
+      const BOARD_KEY = 'memory_math_leaderboard_v1';
+      const PROGRESS_KEY = 'memory_math_progress_v1';
+
+      function genQuestion() {
+        const r = Math.floor(Math.random() * 10);
+        const op = Math.random() < 0.5 ? '+' : '-';
+        let a, b;
+        if (op === '+') { a = Math.floor(Math.random() * (r + 1)); b = r - a; }
+        else { a = Math.floor(Math.random() * (10 - r)) + r; b = a - r; }
+        return { text: `${a} ${op} ${b}`, ans: r };
+      }
+
+      function genQuestions(){
+        questions = [];
+        for(let i=0;i<TOTAL_QUESTIONS;i++) questions.push(genQuestion());
+      }
+
+      function loadProgress() {
+        try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}'); } catch(e){ return {}; }
+      }
+      function saveProgress(obj){ localStorage.setItem(PROGRESS_KEY, JSON.stringify(obj)); }
+      function getUnlockedLevelForUser(user){
+        if (!user) return 1;
+        if (user.toLowerCase() === 'bunengsian') return MAX_LEVEL;
+        const all = loadProgress();
+        return all[user] || 1;
+      }
+      function setUnlockedLevelForUser(user, newLevel){
+        if (!user || user.toLowerCase() === 'bunengsian') return;
+        const all = loadProgress();
+        all[user] = Math.max(all[user] || 1, newLevel);
+        saveProgress(all);
+      }
+
+      function loadBoard(){
+        const raw = localStorage.getItem(BOARD_KEY);
+        if (!raw) return [];
+        try { return JSON.parse(raw); } catch(e){ return []; }
+      }
+      function saveBoard(arr){ localStorage.setItem(BOARD_KEY, JSON.stringify(arr.slice(0,50))); }
+      function addScore(name, levelReached, questionReached, timeUsed){
+        const arr = loadBoard();
+        arr.push({ name: name || '匿名', level: levelReached, question: questionReached, time: Number(timeUsed) || 0, ts: new Date().toISOString() });
+        arr.sort((a,b)=>{
+          if (a.level !== b.level) return b.level - a.level;
+          if (a.question !== b.question) return b.question - a.question;
+          return a.time - b.time;
+        });
+        saveBoard(arr); renderBoard();
+      }
+      function renderBoard(){
+        const arr = loadBoard();
+        boardBody.innerHTML = '';
+        if (!arr.length) { boardBody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">暂无记录</td></tr>'; return; }
+        arr.slice(0,20).forEach((r,i)=>{
+          const tr = document.createElement('tr');
+          [''+(i+1), r.name, r.level, r.question, r.time ? r.time.toFixed(2)+'s' : '-'].forEach(txt=>{
+            const td = document.createElement('td'); td.textContent = txt; tr.appendChild(td);
+          });
+          boardBody.appendChild(tr);
+        });
+      }
+
+      function renderPreview(){
+        previewListEl.innerHTML = '';
+        const n = level;
+        for(let i=0;i<n && i<questions.length;i++){
+          const q = questions[i];
+          const div = document.createElement('div');
+          div.className = 'preview-item';
+          div.innerHTML = `<div>记忆 ${i+1}</div><small style="display:block;color:var(--muted);margin-top:6px">${q.text} = ?</small>`;
+          previewListEl.appendChild(div);
+        }
+      }
+
+      function resetState(newLevel){
+        level = newLevel || level;
+        curLevelEl.textContent = level;
+        answeredCount = 0; correctCount = 0; streak = 0;
+        expectIndex = 0;
+        nextShowIndex = level;
+        running = false;
+        timer = null; startTime = null; elapsedTotal = 0;
+        finished = false;
+        updateStatus('准备');
+        updateUI();
+        btnReplay.style.display = 'none';
+        btnNewLevel.style.display = 'none';
+        btnStart.style.display = '';
+        btnStart.disabled = false;
+      }
+
+      function updateUI(){
+        answeredEl.textContent = answeredCount;
+        correctCntEl.textContent = correctCount;
+        streakEl.textContent = streak;
+        progressText.textContent = `题目: ${answeredCount} / ${TOTAL_QUESTIONS}`;
+        curLevelEl.textContent = level;
+      }
+
+      function updateStatus(s){ gameStatusEl.textContent = s; }
+
+      function prepareGame(){
+        timeLimit = parseFloat(timeLimitEl.value) || 2;
+        level = parseInt(levelSelect.value,10) || 1;
+        genQuestions();
+        nextShowIndex = level;
+        expectIndex = 0;
+        answeredCount = 0; correctCount = 0; streak = 0;
+        running = false; elapsedTotal = 0; startTime = null;
+        renderPreview(); previewListEl.style.display = '';
+        if (questions.length > 0){
+          incomingQ.textContent = questions[0].text + '  =  ?';
+          subInfo.textContent = `已显示前 ${Math.min(level, questions.length)} 道题用于记忆`;
+          expectLabel.textContent = `记忆 第 1 题`;
+        } else {
+          incomingQ.textContent = '—';
+          subInfo.textContent = '准备后开始游戏';
+          expectLabel.textContent = '—';
+        }
+        answerInput.value = ''; answerInput.disabled = true; saveScoreBtn.disabled = true;
+        updateUI(); timerFill.style.width = '100%';
+        btnReplay.style.display = 'none'; btnNewLevel.style.display = 'none';
+        btnStart.style.display = ''; btnStart.disabled = false;
+      }
+
+      function showIncoming(){
+        if (nextShowIndex < questions.length) incomingQ.textContent = questions[nextShowIndex].text + '  =  ?';
+        else incomingQ.textContent = '';
+        subInfo.textContent = `请在 ${timeLimit.toFixed(1)} 秒内输入第 ${expectIndex+1} 题的答案`;
+        expectLabel.textContent = `第 ${expectIndex+1} 题`;
+      }
+
+      function startTick(){
+        if (running) return;
+        running = true;
+        answerInput.disabled = false;
+        try { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); } catch(e){}
+        setTimeout(()=> { try { answerInput.focus(); answerInput.select && answerInput.select(); } catch(e){} }, 20);
+        updateStatus('进行中');
+        startTime = performance.now();
+        showIncoming();
+        const start = performance.now();
+        function tick(ts){
+          if (!running) return;
+          const elapsed = (ts - start) / 1000;
+          const ratio = Math.max(0, 1 - elapsed / timeLimit);
+          timerFill.style.width = (ratio*100) + '%';
+          requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        timer = setTimeout(()=> onTimeout(), Math.ceil(timeLimit*1000));
+      }
+
+      function stopTick(){ running = false; if (timer) { clearTimeout(timer); timer = null; } answerInput.disabled = true; }
+
+      function onTimeout(){ stopTick(); updateStatus('超时 - 游戏结束'); finished = true; endGame(false, '超时'); }
+
+      function submitAnswer(){
+        if (!running) return;
+        const userRaw = answerInput.value.trim();
+        if (userRaw === '') return;
+        if (!/^[0-9]$/.test(userRaw)) return;
+        const userAns = parseInt(userRaw,10);
+        const expectQ = questions[expectIndex];
+        const correct = userAns === expectQ.ans;
+        if (!correct){ stopTick(); updateStatus('错误 - 游戏结束'); finished = true; endGame(false, '答案错误', {userAns, expectQ}); return; }
+        if (timer) { clearTimeout(timer); timer = null; }
+        const now = performance.now();
+        elapsedTotal += (now - startTime) / 1000;
+        answeredCount++; correctCount++; streak++;
+        updateUI(); answerInput.value = '';
+        expectIndex++;
+        if (nextShowIndex < questions.length) nextShowIndex++;
+        if (expectIndex >= TOTAL_QUESTIONS){ stopTick(); updateStatus('通关！'); finished = true; const unlockedNext = Math.min(MAX_LEVEL, level + 1); setUnlockedLevelForUser(currentUser, unlockedNext); endGame(true, '通关'); return; }
+        running = false;
+        setTimeout(()=> startTick(), 120);
+      }
+
+      function endGame(win, reason, extra){
+        stopTick();
+        if (win){ updateStatus('已完成关卡'); incomingQ.textContent = '恭喜通过本关！'; btnReplay.style.display = ''; btnNewLevel.style.display = ''; }
+        else { incomingQ.textContent = '游戏结束'; btnReplay.style.display = ''; btnNewLevel.style.display = 'none'; }
+        // 隐藏开始按钮直到用户点再来一次刷新界面
+        btnStart.style.display = 'none';
+        subInfo.textContent = win ? `用时 ${elapsedTotal.toFixed(2)} 秒，正确 ${correctCount} 道` : `${reason}。已答对 ${correctCount} 道，停在 第 ${Math.min(TOTAL_QUESTIONS, expectIndex+1)} 题`;
+        saveScoreBtn.disabled = false;
+        expectLabel.textContent = win ? '已完成' : `第 ${Math.min(TOTAL_QUESTIONS, expectIndex+1)} 题`;
+        answerInput.disabled = true;
+        updateLevelSelectOptions();
+      }
+
+      function updateLevelSelectOptions(){
+        const unlocked = getUnlockedLevelForUser(currentUser);
+        for (let opt of levelSelect.options){
+          const val = parseInt(opt.value,10);
+          if (currentUser && currentUser.toLowerCase() === 'bunengsian') opt.disabled = false;
+          else opt.disabled = val > unlocked;
+        }
+        const sel = parseInt(levelSelect.value,10);
+        if (!currentUser || currentUser.toLowerCase() !== 'bunengsian'){
+          if (sel > unlocked) levelSelect.value = String(unlocked);
+        }
+      }
+
+      // Events
+      modalOk.addEventListener('click', ()=>{
+        const v = modalName.value.trim();
+        if (!v){ alert('请输入用户名'); modalName.focus(); return; }
+        currentUser = v;
+        usernameEl.value = v;
+        nameModal.style.display = 'none';
+        prepareGame();
+        resetState(level);
+        updateLevelSelectOptions();
+        renderBoard();
+        const isAdmin = (currentUser && currentUser.toLowerCase() === 'bunengsian');
+        btnStop.style.display = isAdmin ? '' : 'none';
+        btnNewLevel.style.display = 'none';
+        btnReset.style.display = isAdmin ? '' : 'none';
+        timeLimitEl.disabled = !isAdmin;
+        btnStart.style.display = ''; btnStart.disabled = false;
+        btnReplay.style.display = 'none';
+      });
+      modalName.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') modalOk.click(); });
+
+      // Start click: hide start button immediately and start countdown.
+      btnStart.addEventListener('click', ()=>{
+        if (!currentUser){ alert('请先输入用户名'); return; }
+        if (finished) prepareGame();
+        resetState(level);
+        previewListEl.style.display = 'none';
+        btnStart.style.display = 'none';
+        btnReplay.style.display = 'none';
+        finished = false;
+        setTimeout(()=> startTick(), 80);
+      });
+
+      // Replay: regenerate UI (preview + questions) but DO NOT auto-start.
+      btnReplay.addEventListener('click', ()=>{
+        if (!currentUser){ alert('请先输入用户名'); return; }
+        prepareGame();
+        resetState(level);
+        finished = false;
+        previewListEl.style.display = '';
+      });
+
+      btnStop.addEventListener('click', ()=>{
+        running = false; stopTick(); finished = true; btnReplay.style.display = ''; updateStatus('已停止'); btnStart.style.display = 'none';
+      });
+
+      btnReset.addEventListener('click', ()=>{
+        if (!currentUser) return;
+        if (!confirm('确定要清空本地排行榜吗？')) return;
+        localStorage.removeItem(BOARD_KEY);
+        renderBoard();
+      });
+
+      btnNewLevel.addEventListener('click', ()=>{
+        const cur = parseInt(levelSelect.value,10) || 1;
+        if (cur < MAX_LEVEL){
+          levelSelect.value = (cur+1).toString();
+          level = cur+1;
+          prepareGame();
+          resetState(level);
+        } else alert('已经是最高关卡（5 关）');
+      });
+
+      answerInput.addEventListener('input', ()=>{
+        const v = answerInput.value.trim();
+        if (!running) return;
+        if (/^[0-9]$/.test(v)) submitAnswer();
+      });
+      answerInput.addEventListener('keydown', (e)=>{
+        if (e.key === 'Enter'){ e.preventDefault(); submitAnswer(); }
+      });
+
+      levelSelect.addEventListener('change', ()=>{
+        level = parseInt(levelSelect.value,10) || 1;
+        prepareGame();
+        resetState(level);
+      });
+
+      timeLimitEl.addEventListener('change', ()=> {
+        const v = parseFloat(timeLimitEl.value);
+        if (isNaN(v) || v < 1) timeLimitEl.value = 1;
+      });
+
+      saveScoreBtn.addEventListener('click', ()=>{
+        const name = (usernameEl.value || currentUser || '').trim() || '匿名';
+        const questionReached = Math.min(TOTAL_QUESTIONS, expectIndex);
+        addScore(name, level, questionReached, elapsedTotal);
+        saveScoreBtn.disabled = true;
+        alert('已保存到排行榜');
+      });
+
+      function init(){ renderBoard(); nameModal.style.display = 'flex'; modalName.focus(); updateStatus('等待用户名'); }
+      init();
+
+      window._memory_math = { prepareGame, genQuestions, renderBoard, loadProgress, saveProgress };
+    })();
+  </script>
+</body>
+</html>
